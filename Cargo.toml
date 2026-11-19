@@ -1,0 +1,24 @@
+[package]
+name = "warp10-platform-rs"
+version = "0.1.0"
+edition = "2021"
+description = "Experimental Rust ingress for Warp 10 with a pluggable .owner/.producer policy (deny-by-default)"
+license = "Apache-2.0"
+repository = "https://github.com/miton18/warp10-platform-rs"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+rdkafka = { version = "0.37", optional = true }
+
+[features]
+default = []
+# Real Kafka producer (librdkafka). Without this feature the binary uses the
+# in-memory mock producer, which is what tests and local experiments use.
+kafka = ["rdkafka"]
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }

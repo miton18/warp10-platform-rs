@@ -1,0 +1,21 @@
+V24 len=0 in= out=726fdb47dd0e0e31
+V24 len=1 in=00 out=74f839c593dc67fd
+V24 len=2 in=0001 out=0d6c8009d9a94f5a
+V24 len=3 in=000102 out=85676696d7fb7e2d
+PAL len=0 data= pal_offset=726fdb47dd0e0e31 pal_nooffset=726fdb47dd0e0e31
+PAL len=1 data=2b pal_offset=aadc3f3eca7374d6 pal_nooffset=aadc3f3eca7374d6
+PAL len=3 data=61aa9a pal_offset=7da59e07f2c998cc pal_nooffset=7da59e07f2c998cc
+PAL len=4 data=685e885c pal_offset=f604c121724a28ba pal_nooffset=f604c121724a28ba
+PAL len=7 data=b276545718c30f pal_offset=b7b581162d29df80 pal_nooffset=b7b581162d29df80
+PAL len=8 data=e62655dfbd6f83b8 pal_offset=b9de0d45863a4800 pal_nooffset=b9de0d45863a4800
+PAL len=9 data=f66205835ccc16ad68 pal_offset=6343d49e408f34fe pal_nooffset=6343d49e408f34fe
+PAL len=15 data=9b56dd53b3351a572b40f27f72d37f pal_offset=95c945aff83bd5b7 pal_nooffset=95c945aff83bd5b7
+PAL len=16 data=6196d92c304697e953c0026cc4a45eb3 pal_offset=e77b949c7ea7c506 pal_nooffset=e77b949c7ea7c506
+PAL len=17 data=3517ef7da4c0ce2972cc9b060b08b64608 pal_offset=58848f81e0e51c6d pal_nooffset=58848f81e0e51c6d
+PAL len=20 data=5bd1283ed5021192ed6a754300c523675af9b6c4 pal_offset=543bda65f6d94983 pal_nooffset=543bda65f6d94983
+PAL len=31 data=067b87849adf0100aa4a52cc32388c082af3d5d78b98bcc00bd26fae51303f pal_offset=43b6491f6a1d3db0 pal_nooffset=43b6491f6a1d3db0
+PAL len=32 data=ec22daa9395cbb3cb06feaf2456f0a5717a6b5bb127579092bb2831b0279bb50 pal_offset=51b36c2e9f29fd9e pal_nooffset=51b36c2e9f29fd9e
+PAL len=33 data=cbd3ed4091091e01aa26a3d1750dfb4178d5d1a3e2c95da3d6759f5be1c2c790d3 pal_offset=190db2cd4c953c3b pal_nooffset=190db2cd4c953c3b
+PAL len=64 data=46580edde42d2e8a65f64ba69ddd914f387b8934917ca07a548c5dcdc46ba917160239c103a2db67f4c18eef29b32fa68ba1aa5db9501dfbfb1177b555921451 pal_offset=f018a3a0fbc358eb pal_nooffset=f018a3a0fbc358eb
+PALKEY k0=5efaa97c4a6c5f10 k1=df2f3ddb2760b3c7 msg=776172703130 out=456ca3f94fefa2e4
+GETKEY key=a0a1a2a3a4a5a6a7a8a9aaabacadaeaf k0=a0a1a2a3a4a5a6a7 k1=a8a9aaabacadaeaf
