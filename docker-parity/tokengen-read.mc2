@@ -1,0 +1,12 @@
+{
+  'type' 'READ'
+  'application' 'parity-app'
+  'owner' '11111111-2222-3333-4444-555555555555'
+  'issuance' NOW
+  'expiry' NOW 31536000000000 +
+  'labels' { }
+  'attributes' { }
+  'owners' [ '11111111-2222-3333-4444-555555555555' ]
+  'producers' [ 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' ]
+  'applications' [ 'parity-app' ]
+} TOKENGEN

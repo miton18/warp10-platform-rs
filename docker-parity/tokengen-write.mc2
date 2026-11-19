@@ -1,0 +1,10 @@
+{
+  'type' 'WRITE'
+  'application' 'parity-app'
+  'owner' '11111111-2222-3333-4444-555555555555'
+  'producer' 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+  'issuance' NOW
+  'expiry' NOW 31536000000000 +   // ~1 year in ms
+  'labels' { }
+  'attributes' { }
+} TOKENGEN

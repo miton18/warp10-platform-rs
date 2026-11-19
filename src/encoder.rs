@@ -68,6 +68,8 @@ pub struct Encoder {
     last_elev: i64,
     last_long: i64,
     last_double: f64,
+    /// stripped (unscaled, scale) of the last BigDecimal-encoded value
+    last_bd: Option<(i128, i32)>,
     last_string: String,
     valid_long: bool,
     valid_double: bool,
@@ -89,6 +91,7 @@ impl Encoder {
             last_elev: NO_ELEVATION,
             last_long: i64::MAX,
             last_double: 0.0,
+            last_bd: None,
             last_string: String::new(),
             valid_long: false,
             valid_double: false,
@@ -155,6 +158,20 @@ impl Encoder {
                 if self.valid_double && (*dv == self.last_double || (dv.is_nan() && self.last_double.is_nan())) {
                     ts_type_flag |= FLAGS_VALUE_IDENTICAL;
                 } else {
+                    ts_type_flag |= FLAGS_DOUBLE_IEEE754;
+                }
+            }
+            Value::Decimal { unscaled, scale } => {
+                // Mirrors the BigDecimal branch of GTSEncoder.addValue: strip
+                // trailing zeros, then IDENTICAL if numerically equal to the
+                // last BigDecimal, else IEEE754 when scale or mantissa do not
+                // fit, else the compact scale+unscaled encoding.
+                ts_type_flag |= FLAGS_TYPE_DOUBLE;
+                let (u, sc) = strip_trailing_zeros(*unscaled, *scale);
+                let identical = self.last_bd == Some((u, sc));
+                if identical {
+                    ts_type_flag |= FLAGS_VALUE_IDENTICAL;
+                } else if sc > 127 || sc < -128 || bigint_bitlen(u) > 46 {
                     ts_type_flag |= FLAGS_DOUBLE_IEEE754;
                 }
             }
@@ -284,11 +301,29 @@ impl Encoder {
             }
             FLAGS_TYPE_DOUBLE => {
                 if ts_type_flag & FLAGS_VALUE_IDENTICAL != FLAGS_VALUE_IDENTICAL {
-                    if let Value::Double(dv) = value {
-                        // doubles from the line format are always IEEE754-encoded
-                        self.buf.extend_from_slice(&dv.to_be_bytes());
-                        self.last_double = *dv;
-                        self.valid_double = true;
+                    match value {
+                        Value::Double(dv) => {
+                            self.buf.extend_from_slice(&dv.to_be_bytes());
+                            self.last_double = *dv;
+                            self.valid_double = true;
+                            self.last_bd = None;
+                        }
+                        Value::Decimal { unscaled, scale } => {
+                            if ts_type_flag & FLAGS_DOUBLE_IEEE754 != 0 {
+                                let dv = (*unscaled as f64) * 10f64.powi(-scale);
+                                self.buf.extend_from_slice(&dv.to_be_bytes());
+                                self.last_double = dv;
+                                self.valid_double = true;
+                                self.last_bd = None;
+                            } else {
+                                let (u, sc) = strip_trailing_zeros(*unscaled, *scale);
+                                self.buf.push(sc as u8);
+                                encode_signed_varint(u as i64, &mut self.buf);
+                                self.last_bd = Some((u, sc));
+                                self.valid_double = false;
+                            }
+                        }
+                        _ => unreachable!(),
                     }
                 }
             }
@@ -296,5 +331,27 @@ impl Encoder {
             _ => unreachable!(),
         }
         self.count += 1;
+    }
+}
+
+/// BigDecimal.stripTrailingZeros for non-zero values (zero normalizes to 0E0).
+pub fn strip_trailing_zeros(mut unscaled: i128, mut scale: i32) -> (i128, i32) {
+    if unscaled == 0 {
+        return (0, 0);
+    }
+    while unscaled % 10 == 0 {
+        unscaled /= 10;
+        scale -= 1;
+    }
+    (unscaled, scale)
+}
+
+/// java.math.BigInteger.bitLength (two's complement length without sign bit).
+fn bigint_bitlen(v: i128) -> u32 {
+    let m: u128 = if v >= 0 { v as u128 } else { (!v) as u128 };
+    if m == 0 {
+        0
+    } else {
+        128 - m.leading_zeros()
     }
 }

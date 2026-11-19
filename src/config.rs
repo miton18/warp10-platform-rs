@@ -21,6 +21,14 @@ pub struct Config {
     pub kafka_brokers: String,
     /// Max request body size in bytes.
     pub max_body_bytes: usize,
+    /// Optional 16-byte SipHash key (hex) for MACing data-topic values
+    /// (`kafka.data.mac` / INGRESS_KAFKA_DATA_MAC). When set, each value gets
+    /// an 8-byte big-endian hash24_palindromic MAC appended (CryptoUtils.addMAC).
+    #[serde(default)]
+    pub kafka_data_mac: Option<String>,
+    /// Same for the metadata topic (`kafka.metadata.mac`).
+    #[serde(default)]
+    pub kafka_metadata_mac: Option<String>,
 }
 
 impl Default for Config {
@@ -34,6 +42,8 @@ impl Default for Config {
             meta_topic: "warp10.meta".to_string(),
             kafka_brokers: "localhost:9092".to_string(),
             max_body_bytes: 32 * 1024 * 1024,
+            kafka_data_mac: None,
+            kafka_metadata_mac: None,
         }
     }
 }
@@ -95,5 +105,26 @@ impl Config {
             return Err("siphash labels key must be 16 bytes (32 hex chars)".into());
         }
         Ok(crate::siphash::get_key(&b))
+    }
+
+    fn mac_key(&self, hexstr: &Option<String>) -> Result<Option<[u64; 2]>, String> {
+        match hexstr {
+            None => Ok(None),
+            Some(h) => {
+                let b = hex::decode(h).map_err(|e| format!("bad kafka mac key: {e}"))?;
+                if b.len() != 16 {
+                    return Err("kafka mac key must be 16 bytes (32 hex chars)".into());
+                }
+                Ok(Some(crate::siphash::get_key(&b)))
+            }
+        }
+    }
+
+    pub fn data_mac_key(&self) -> Result<Option<[u64; 2]>, String> {
+        self.mac_key(&self.kafka_data_mac)
+    }
+
+    pub fn meta_mac_key(&self) -> Result<Option<[u64; 2]>, String> {
+        self.mac_key(&self.kafka_metadata_mac)
     }
 }

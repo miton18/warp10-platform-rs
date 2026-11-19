@@ -1,0 +1,10 @@
+{
+  "listen": "127.0.0.1:18099",
+  "tokens_file": "docker-parity/rust-tokens.json",
+  "siphash_class_key": "0102030405060708090a0b0c0d0e0f10",
+  "siphash_labels_key": "1112131415161718191a1b1c1d1e1f20",
+  "data_topic": "warp10-data",
+  "meta_topic": "warp10-meta",
+  "kafka_brokers": "localhost:9092",
+  "max_body_bytes": 33554432
+}

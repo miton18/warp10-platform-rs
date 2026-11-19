@@ -108,7 +108,11 @@ fn parse_line_location_elevation_and_types() {
     let d = parse_line("1700000000000000/48.8566:2.3522/35 cpu{} 1.5", 0).unwrap();
     assert_eq!(d.location, to_geo_xp_point(48.8566, 2.3522));
     assert_eq!(d.elevation, 35);
-    assert_eq!(d.value, Value::Double(1.5));
+    // short decimals parse as BigDecimal (GTSHelper.parseValue_regexp heuristic)
+    assert_eq!(d.value, Value::Decimal { unscaled: 15, scale: 1 });
+    // long fractions (>9 digits) fall back to Double
+    let d = parse_line("1700000000000000// cpu{} 1.2345678901", 0).unwrap();
+    assert_eq!(d.value, Value::Double(1.2345678901));
 
     let d = parse_line("1700000000000000// cpu{} T", 0).unwrap();
     assert_eq!(d.value, Value::Bool(true));

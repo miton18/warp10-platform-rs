@@ -1,0 +1,116 @@
+# Distributed Warp 10 cluster for byte-parity tests against warp10-platform-rs.
+#
+#   cd docker-parity
+#   ./scripts/setup-cluster.sh     # configure FDB + mint tokens + write fdb.cluster
+#   ./scripts/parity.sh            # stock ingress vs rust ingress, byte-level
+#
+# NOTE: network_mode: host everywhere (bridge/nftables is unavailable in some
+# sandboxes). Services: zookeeper :2181, kafka :9092, fdb :4500,
+# ingress HTTP :8080, egress HTTP :8081.
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.0
+    network_mode: host
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_ADMIN_SERVER_PORT: 18080
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0
+    network_mode: host
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: localhost:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_MS: 86400000
+
+  fdb:
+    image: foundationdb/foundationdb:7.1.57
+    network_mode: host
+    volumes:
+      - fdb-data:/var/fdb
+
+  directory:
+    image: warp10io/warp10:3.5.0-ubuntu
+    network_mode: host
+    env_file: warp10.env
+    environment:
+      - FLAVOR=distributed
+      - BUILD_WARPSTUDIO=false
+      - components=directory
+      - directory.host=127.0.0.1
+    volumes:
+      - w10-directory:/data
+      - ./fdb.cluster:/fdb.cluster:ro
+      - ./conf.extra/directory:/config.extra:ro
+    depends_on:
+      - zookeeper
+      - kafka
+      - fdb
+
+  store:
+    image: warp10io/warp10:3.5.0-ubuntu
+    network_mode: host
+    env_file: warp10.env
+    environment:
+      - FLAVOR=distributed
+      - BUILD_WARPSTUDIO=false
+      - components=store
+    volumes:
+      - w10-store:/data
+      - ./fdb.cluster:/fdb.cluster:ro
+      - ./conf.extra/store:/config.extra:ro
+    depends_on:
+      - zookeeper
+      - kafka
+      - fdb
+
+  ingress:
+    image: warp10io/warp10:3.5.0-ubuntu
+    network_mode: host
+    env_file: warp10.env
+    environment:
+      - FLAVOR=distributed
+      - BUILD_WARPSTUDIO=false
+      - components=ingress
+      - ingress.host=0.0.0.0
+      - ingress.port=8080
+    volumes:
+      - w10-ingress:/data
+      - ./:/work:ro
+      - ./conf.extra/ingress:/config.extra:ro
+    depends_on:
+      - zookeeper
+      - kafka
+
+  egress:
+    image: warp10io/warp10:3.5.0-ubuntu
+    network_mode: host
+    env_file: warp10.env
+    environment:
+      - FLAVOR=distributed
+      - BUILD_WARPSTUDIO=false
+      - components=egress
+      - egress.host=0.0.0.0
+      - egress.port=8081
+    volumes:
+      - w10-egress:/data
+      - ./fdb.cluster:/fdb.cluster:ro
+      - ./conf.extra/egress:/config.extra:ro
+    depends_on:
+      - zookeeper
+      - directory
+
+volumes:
+  fdb-data:
+  w10-directory:
+  w10-store:
+  w10-ingress:
+  w10-egress:

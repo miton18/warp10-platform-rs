@@ -1,0 +1,12 @@
+{
+  "tokens": {
+    "rust-dev-token": {
+      "owner": "11111111-2222-3333-4444-555555555555",
+      "producer": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      "app": "parity-app",
+      "labels": {},
+      "attributes": [],
+      "expiry": null
+    }
+  }
+}

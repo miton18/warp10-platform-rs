@@ -58,6 +58,8 @@ fn test_state() -> AppState {
         mock: Some(mock),
         class_key,
         labels_key,
+        data_mac: None,
+        meta_mac: None,
         seen_gts: std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashSet::new())),
     }
 }

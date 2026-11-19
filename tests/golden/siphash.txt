@@ -19,3 +19,4 @@ PAL len=33 data=cbd3ed4091091e01aa26a3d1750dfb4178d5d1a3e2c95da3d6759f5be1c2c790
 PAL len=64 data=46580edde42d2e8a65f64ba69ddd914f387b8934917ca07a548c5dcdc46ba917160239c103a2db67f4c18eef29b32fa68ba1aa5db9501dfbfb1177b555921451 pal_offset=f018a3a0fbc358eb pal_nooffset=f018a3a0fbc358eb
 PALKEY k0=5efaa97c4a6c5f10 k1=df2f3ddb2760b3c7 msg=776172703130 out=456ca3f94fefa2e4
 GETKEY key=a0a1a2a3a4a5a6a7a8a9aaabacadaeaf k0=a0a1a2a3a4a5a6a7 k1=a8a9aaabacadaeaf
+MAC key=8182838485868788898a8b8c8d8e8f90 msg="hello warp10 kafka mac" 60d78a78238a995b

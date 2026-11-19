@@ -11,6 +11,10 @@ use std::collections::BTreeMap;
 pub enum Value {
     Long(i64),
     Double(f64),
+    /// BigDecimal semantics, as produced by the platform line parser for
+    /// `[+-]?\d+\.\d+` literals whose integer and fraction parts are both
+    /// shorter than 10 digits (see GTSHelper.parseValue_regexp).
+    Decimal { unscaled: i128, scale: i32 },
     Str(String),
     Bool(bool),
     /// null value in the line format = delete marker
@@ -126,30 +130,76 @@ fn parse_elev(s: &str) -> Result<i64, ParseError> {
     }
 }
 
+/// Mirror of GTSHelper.parseValue_regexp: DOUBLE_VALUE_RE first (with the
+/// <10 digits heuristic choosing BigDecimal over Double), then LONG_VALUE_RE,
+/// STRING_VALUE_RE, BOOLEAN_VALUE_RE; anything else is a parse error.
 fn parse_value(s: &str) -> Result<Value, ParseError> {
     let t = s.trim();
     if t.is_empty() {
         return Err(ParseError("empty value".into()));
     }
-    match t {
-        "T" | "t" | "true" | "TRUE" => return Ok(Value::Bool(true)),
-        "F" | "f" | "false" | "FALSE" => return Ok(Value::Bool(false)),
-        "null" | "NULL" => return Ok(Value::Delete),
-        _ => {}
+    if t.eq_ignore_ascii_case("null") {
+        return Ok(Value::Delete);
     }
+    // ^[+-]?([0-9]+)\.([0-9]+)$
+    if let Some((sign, int_part, frac_part)) = split_decimal(t) {
+        if int_part.len() < 10 && frac_part.len() < 10 {
+            let digits = format!("{int_part}{frac_part}");
+            let unscaled: i128 = digits
+                .parse()
+                .map_err(|_| ParseError(format!("bad decimal {t:?}")))?;
+            let unscaled = if sign == "-" { -unscaled } else { unscaled };
+            return Ok(Value::Decimal {
+                unscaled,
+                scale: frac_part.len() as i32,
+            });
+        }
+        return t
+            .parse::<f64>()
+            .map(Value::Double)
+            .map_err(|_| ParseError(format!("bad double {t:?}")));
+    }
+    // ^[+-]?[0-9]+$
+    if is_long_literal(t) {
+        return t
+            .parse::<i64>()
+            .map(Value::Long)
+            .map_err(|_| ParseError(format!("bad long {t:?}")));
+    }
+    // ^['\"].*['\"]$
     let b = t.as_bytes();
     if b.len() >= 2 && (b[0] == b'\'' || b[0] == b'"') && b[b.len() - 1] == b[0] {
-        return Ok(Value::Str(unquote(t)?));
+        return Ok(Value::Str(t[1..t.len() - 1].to_string()));
     }
-    if let Ok(v) = t.parse::<i64>() {
-        return Ok(Value::Long(v));
+    // ^(T|F|true|false)$ case-insensitive
+    let low = t.to_ascii_lowercase();
+    if matches!(low.as_str(), "t" | "true" | "f" | "false") {
+        return Ok(Value::Bool(matches!(low.as_str(), "t" | "true")));
     }
-    if t.contains(['.', 'e', 'E']) || t.eq_ignore_ascii_case("nan") || t.eq_ignore_ascii_case("infinity") {
-        if let Ok(v) = t.parse::<f64>() {
-            return Ok(Value::Double(v));
-        }
+    Err(ParseError(format!("invalid value {t:?}")))
+}
+
+/// Split `[+-]?int.frac` into (sign, int_part, frac_part); None if not matching.
+fn split_decimal(t: &str) -> Option<(&str, &str, &str)> {
+    let (sign, b) = if let Some(r) = t.strip_prefix('-') {
+        ("-", r)
+    } else if let Some(r) = t.strip_prefix('+') {
+        ("", r)
+    } else {
+        ("", t)
+    };
+    let dot = b.find('.')?;
+    let (ip, fp) = (&b[..dot], &b[dot + 1..]);
+    if !ip.is_empty() && !fp.is_empty() && ip.bytes().all(|c| c.is_ascii_digit()) && fp.bytes().all(|c| c.is_ascii_digit()) {
+        Some((sign, ip, fp))
+    } else {
+        None
     }
-    Ok(Value::Str(t.to_string()))
+}
+
+fn is_long_literal(t: &str) -> bool {
+    let b = t.strip_prefix('+').or_else(|| t.strip_prefix('-')).unwrap_or(t);
+    !b.is_empty() && b.bytes().all(|c| c.is_ascii_digit())
 }
 
 /// Parse one `/api/v0/update` line.

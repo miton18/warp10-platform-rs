@@ -10,6 +10,23 @@ stock Java ingress.
 > bottom. The security-sensitive part is `src/policy.rs` — read it before
 > running this anywhere real.
 
+## Byte-parity tests against a real cluster (`docker-parity/`)
+
+`docker-parity/` runs a full distributed Warp 10 3.5.0 cluster in docker
+(zookeeper / kafka / FDB 7.1 / directory / store / ingress :8080 / egress :8081)
+and compares the Kafka messages of the stock ingress vs this crate **byte for
+byte** (key = classId||labelsId BE, value = thrift-compact `KafkaDataMessage` /
+`Metadata`), then replays rust-produced messages into the real topics and fetches
+them back through the egress. See `docker-parity/README.md`; run it with
+`docker-parity/scripts/parity.sh`. Latest run: data messages byte-identical, meta
+fields identical, and the rust-written GTS is fetchable end-to-end.
+
+Notable ported details verified by the golden tests (`tests/golden/`):
+SipHash-2-4 + `hash24_palindromic`, classId/labelsId, the GTSEncoder binary format
+(incl. the **BigDecimal** path used by the platform line parser for short decimal
+literals), thrift compact serialization, and the Kafka MAC (`hash24_palindromic`,
+8 BE bytes appended) when `kafka.*.mac` is configured.
+
 ## What it does
 
 ```

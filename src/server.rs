@@ -34,6 +34,8 @@ pub struct AppState {
     pub mock: Option<MockProducer>,
     pub class_key: ids::SipKey,
     pub labels_key: ids::SipKey,
+    pub data_mac: Option<ids::SipKey>,
+    pub meta_mac: Option<ids::SipKey>,
     /// gtsIds for which metadata was already published (dedup, like the
     /// stock ingress' IngressMetadataConsumer).
     pub seen_gts: Arc<Mutex<HashSet<i64>>>,
@@ -166,6 +168,10 @@ async fn update(
             let meta_bytes = meta.serialize();
             let mut value = kafka_key.to_vec();
             value.extend_from_slice(&meta_bytes);
+            if let Some(mac) = &state.meta_mac {
+                let h = crate::siphash::hash24_palindromic(mac[0], mac[1], &value);
+                value.extend_from_slice(&h.to_be_bytes());
+            }
             if let Err(e) = state.producer.send(&state.config.meta_topic, &kafka_key, &value) {
                 return err(StatusCode::INTERNAL_SERVER_ERROR, format!("meta produce: {e}"));
             }
@@ -184,7 +190,11 @@ async fn update(
             metadata: None,
             attributes: None,
         };
-        let value = kdm.serialize();
+        let mut value = kdm.serialize();
+        if let Some(mac) = &state.data_mac {
+            let h = crate::siphash::hash24_palindromic(mac[0], mac[1], &value);
+            value.extend_from_slice(&h.to_be_bytes());
+        }
         if let Err(e) = state.producer.send(&state.config.data_topic, &kafka_key, &value) {
             return err(StatusCode::INTERNAL_SERVER_ERROR, format!("data produce: {e}"));
         }
@@ -220,6 +230,8 @@ pub fn build_state(config: Config) -> Result<AppState, String> {
     let tokens = TokenDirectory::load(&config.tokens_file)?;
     let class_key = config.class_key()?;
     let labels_key = config.labels_key()?;
+    let data_mac = config.data_mac_key()?;
+    let meta_mac = config.meta_mac_key()?;
 
     #[cfg(feature = "kafka")]
     let (producer, mock): (Arc<dyn Producer>, Option<MockProducer>) = {
@@ -245,6 +257,8 @@ pub fn build_state(config: Config) -> Result<AppState, String> {
         mock,
         class_key,
         labels_key,
+        data_mac,
+        meta_mac,
         seen_gts: Arc::new(Mutex::new(HashSet::new())),
     })
 }

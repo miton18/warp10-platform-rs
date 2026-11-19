@@ -67,6 +67,20 @@ fn siphash_palindromic_golden() {
                 let expected = u64::from_str_radix(parts[4].split('=').nth(1).unwrap(), 16).unwrap();
                 assert_eq!(siphash::hash24_palindromic(k0, k1, &msg), expected, "PALKEY");
             }
+            "MAC" => {
+                // CryptoUtils.addMAC: hash24_palindromic(key, msg) as 8 BE bytes
+                // line format: MAC key=<hex> msg="<quoted>" <expected hex>
+                let rest = line.strip_prefix("MAC ").unwrap();
+                let keyhex = rest.split_whitespace().next().unwrap().split('=').nth(1).unwrap();
+                let q1 = rest.find('"').unwrap();
+                let q2 = rest.rfind('"').unwrap();
+                let msg = &rest[q1 + 1..q2];
+                let expected = rest[q2 + 1..].trim();
+                let kb = hex::decode(keyhex).unwrap();
+                let key = siphash::get_key(&kb);
+                let h = siphash::hash24_palindromic(key[0], key[1], msg.as_bytes());
+                assert_eq!(hex::encode(h.to_be_bytes()), expected, "MAC");
+            }
             "GETKEY" => {
                 let key = hex::decode(parts[1].split('=').nth(1).unwrap()).unwrap();
                 let k0 = u64::from_str_radix(parts[2].split('=').nth(1).unwrap(), 16).unwrap();
@@ -157,7 +171,22 @@ fn encoder_golden_vectors() {
         let parts: Vec<&str> = line.split_whitespace().collect();
         expected.insert(parts[0].to_string(), parts[2].to_string());
     }
-    for (name, enc) in [("ENC1", &e1), ("ENC2", &e2), ("ENC3", &e3), ("ENC4", &e4), ("ENC5", &e5)] {
+    // BigDecimal path (ENCBD1/ENCBD2, produced with upstream GTSEncoder +
+    // java.math.BigDecimal): 1.5/2.5/2.50 as in the docker-parity mem batch,
+    // then -12.300, a high-scale decimal, and a >46-bit mantissa (IEEE754).
+    let mut e6 = Encoder::new(0);
+    enc_add(&mut e6, 1700000000003000, NO_LOCATION, NO_ELEVATION, Value::Decimal { unscaled: 15, scale: 1 });
+    enc_add(&mut e6, 1700000000004000, NO_LOCATION, NO_ELEVATION, Value::Decimal { unscaled: 25, scale: 1 });
+    enc_add(&mut e6, 1700000000005000, NO_LOCATION, NO_ELEVATION, Value::Decimal { unscaled: 250, scale: 2 });
+    let mut e7 = Encoder::new(0);
+    enc_add(&mut e7, 1, NO_LOCATION, NO_ELEVATION, Value::Decimal { unscaled: -12300, scale: 3 });
+    enc_add(&mut e7, 2, NO_LOCATION, NO_ELEVATION, Value::Decimal { unscaled: 12345678901234567890, scale: 29 });
+    enc_add(&mut e7, 3, NO_LOCATION, NO_ELEVATION, Value::Decimal { unscaled: 1i128 << 60, scale: 0 });
+
+    for (name, enc) in [
+        ("ENC1", &e1), ("ENC2", &e2), ("ENC3", &e3), ("ENC4", &e4), ("ENC5", &e5),
+        ("ENCBD1", &e6), ("ENCBD2", &e7),
+    ] {
         assert_eq!(hex::encode(enc.get_bytes()), expected[name], "{name}");
     }
 }

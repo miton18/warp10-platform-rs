@@ -1,0 +1,11 @@
+1700000000000000// cpu-rs{host=web1,env=prod} 42
+1700000000001000// cpu-rs{host=web1,env=prod} 43
+1700000000002000/48.8566:2.3522/35 cpu-rs{host=web1,env=prod} 43
+1700000000003000// mem-rs{host=web2} 1.5
+1700000000004000// mem-rs{host=web2} 2.5
+1700000000005000// mem-rs{host=web2} 2.5
+1700000000006000// disk-rs{host=web1} T
+1700000000007000// disk-rs{host=web1} 'hello world'
+1700000000008000// disk-rs{host=web1} 'hello world'
+1700000000009000// big-rs{host=web3} 1099511627776
+1700000000010000// big-rs{host=web3} -7
